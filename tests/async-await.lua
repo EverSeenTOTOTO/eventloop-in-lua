@@ -57,27 +57,6 @@ return function(lu)
       lu.assertEquals(r, { 42 })
     end,
 
-    testThrowMiddle = function()
-      local r = {}
-      local f = async {
-        function()
-          await { empty() }
-          table.insert(r, 1)
-          await { empty() }
-          table.insert(r, 2)
-          error(42)
-          table.insert(r, 3)
-          await { empty() }
-          await { empty() }
-        end,
-      }
-
-      f()
-
-      lu.assertEquals(value, nil)
-      lu.assertEquals(r, { 1, 2 })
-    end,
-
     testAwaitReturn = function()
       local r = {}
       local f = async {
@@ -90,7 +69,6 @@ return function(lu)
       }
 
       f()
-
       lu.assertEquals(r, { 42, true })
     end,
 
@@ -119,32 +97,30 @@ return function(lu)
         end,
       }
       f()
-
       lu.assertEquals(r, { 42 })
     end,
 
-    -- testNested = function()
-    --   local r = {}
-    --   local f = async {
-    --     function()
-    --       await {
-    --         Promise:new(async {
-    --           function(resolve)
-    --             await { empty() }
-    --             resolve(42)
-    --           end,
-    --         }):next(async {
-    --           function(value)
-    --             await { empty() }
-    --             table.insert(r, value)
-    --           end,
-    --         }),
-    --       }
-    --     end,
-    --   }
-    --   f()
-
-    --   lu.assertEquals(r, { 42 })
-    -- end,
+    testNested = function()
+      local r = {}
+      local f = async {
+        function()
+          await {
+            Promise:new(async {
+              function(resolve)
+                await { empty() }
+                resolve(42)
+              end,
+            }):next(async {
+              function(value)
+                await { empty() }
+                table.insert(r, value)
+              end,
+            }),
+          }
+        end,
+      }
+      f()
+      lu.assertEquals(r, { 42 })
+    end,
   }
 end

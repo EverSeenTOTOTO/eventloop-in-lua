@@ -185,5 +185,14 @@ return function(lu)
 
       lu.assertEquals(r, { 1, 2, 3 })
     end,
+
+    testCycle = function()
+      lu.assertErrorMsgContains("Promise-chain cycle", function()
+        eventLoop(function()
+          local p
+          p = Promise:new(function(res) res() end):next(function() return p end)
+        end)
+      end)
+    end,
   }
 end

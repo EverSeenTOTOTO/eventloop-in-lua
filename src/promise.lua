@@ -37,15 +37,15 @@ local Promise = createClass(function(self, fn)
       end
 
       if instanceof(data, self.__proto__) then
-        microtask(function()
-          data
-            :next(function(value) dict[self].pdata = value end)
-            :catch(function(value) dict[self].pdata = value end)
-            :finally(function()
-              dict[self].pstate = finalState
-              notify(self)
-            end)
-        end)
+        if data == self then error("Promise-chain cycle") end
+
+        data
+          :next(function(value) dict[self].pdata = value end)
+          :catch(function(value) dict[self].pdata = value end)
+          :finally(function()
+            dict[self].pstate = finalState
+            notify(self)
+          end)
       else
         dict[self].pdata = data
         dict[self].pstate = finalState

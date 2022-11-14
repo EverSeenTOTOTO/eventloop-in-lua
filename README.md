@@ -3,7 +3,7 @@
 Simulate the `async/await` syntax sugar in Javascript when writing Lua coroutines...
 
 Note: not really run in parallel since we cannot run microtasks at the same time with naive Lua, so this repo is currently useless,
-I'm looking for solutions like luv...
+I'm looking for solutions like [luv](https://github.com/luvit/luv/blob/master/docs.md#uv_timer_t--timer-handle)...
 
 ```lua
 -- create long time running task
@@ -70,10 +70,9 @@ main()
 
   A high-order function accepts a coroutine function and returns a function that returns a `Promise` once executed.
 
-
 + `await`
 
-  A wrap function for `coroutine.yield`, accepts anything and promisify them, will return if the promise got fulfilled or throw if it encountered an error.
+  A wrap function for `coroutine.yield`, accepts anything and promisify them, returns `result, true` if the promise got fulfilled and `result, false` if it encountered an error.
 
   ```lua
   async {function()
@@ -85,23 +84,21 @@ main()
 
 ## Important Notes
 
-1. You may write codes like this:
+You may write codes like this:
 
-    ```lua
-    async {function main() await ... end}
-    main() -- will not work!
-    ```
+```lua
+async {function main() await ... end}
+main() -- will not work!
+```
 
-    The reason for this is that `async` is a wrapper function, and its parameter should be a coroutine function that cannot be executed directly. This is not the same as the Javascript keyword `async.` In this case, the`main` function is more similar to `function* main() yield...` in Javascript.
+The reason for this is that `async` is a wrapper function, and its parameter should be a coroutine function that cannot be executed directly. This is not the same as the Javascript keyword `async.` In this case, the`main` function is more similar to `function* main() yield...` in Javascript.
 
-    What you want is probably this:
+What you want is probably this:
 
-    ```lua
-    local main = async {function() await ... end}
-    main()
-    ```
-
-2. In Javascript, the methods `then` and `catch` can accept more than one callback, but I ignored that here.
+```lua
+local main = async {function() await ... end}
+main()
+```
 
 ## How to?
 

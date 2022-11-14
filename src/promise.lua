@@ -1,3 +1,5 @@
+-- part of these codes are stolen from corejs
+
 local createClass = require("src/class")
 local microtask = require("src/microtask").microtask
 
@@ -95,6 +97,7 @@ local function factory(self, callback, predicate)
 end
 
 function Promise.prototype:next(callback)
+  callback = callback or function() end
   return factory(
     self,
     function() return callback(dict[self].pdata) end,
@@ -103,6 +106,7 @@ function Promise.prototype:next(callback)
 end
 
 function Promise.prototype:catch(callback)
+  callback = callback or function() end
   return factory(
     self,
     function() return callback(dict[self].pdata) end,
@@ -111,6 +115,7 @@ function Promise.prototype:catch(callback)
 end
 
 function Promise.prototype:finally(callback)
+  callback = callback or function() end
   return factory(self, callback, function() return dict[self].pstate ~= PStates.Pending end)
 end
 
@@ -127,12 +132,42 @@ end
 function Promise:isPromise(any) return instanceof(any, Promise.prototype) end
 
 function Promise:resolve(any)
-  return Promise:isPromise(any) and Promise:new(function(res, rej) any:next(res):catch(rej) end)
-    or Promise:new(function(res) res(any) end)
+  return Promise:isPromise(any) and any or Promise:new(function(res) res(any) end)
 end
 
 function Promise:reject(any)
   return Promise:new(function(_, rej) rej(any) end)
+end
+
+function Promise:all(ps)
+  local results, coroutines = {}, {}
+
+  for _, p in ipairs(ps) do
+    table.insert(coroutines, coroutine.create(function()
+      while dict[p].pstate == PStates.Pending do
+        coroutine.yield(true)
+      end
+
+      if dict[p].pstate == PStates.Rejected then
+        error(dict[p].pdata)
+      else
+        table.insert(results, dict[p].pdata)
+      end
+    end))
+  end
+
+  return Promise:new(function(resolve, reject)
+    while #results ~= #ps do
+      local status, err
+      for _, co in ipairs(coroutines) do
+        status, err = coroutine.resume(co)
+
+        if not status then break end
+      end
+      if not status then return reject(err) end
+    end
+    return resolve(results)
+  end)
 end
 
 return Promise

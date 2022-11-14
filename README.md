@@ -10,9 +10,9 @@ I'm looking for solutions like [luv](https://github.com/luvit/luv/blob/master/do
 local function sleep(name, cost)
   return Promise:new(function(resolve)
     local start = os.clock()
-    while os.clock() - start <= cost do end
-    print(name .. " done!")
-    resolve()
+    while os.clock() - start <= cost do
+    end
+    resolve(name .. " done!")
   end)
 end
 
@@ -20,10 +20,14 @@ local main = async {
   function()
     local start = os.time()
 
-    await { Promise.all {
+    local result = await { Promise:all {
       sleep("A", 1),
-      sleep("B", 2),
+      sleep("B", 2)
     } }
+
+    for _, v in ipairs(result) do
+      print(v)
+    end
 
     print(string.format("elapsed %fs", os.time() - start)) -- elapsed 3.000000s, not 2.000000s
   end,

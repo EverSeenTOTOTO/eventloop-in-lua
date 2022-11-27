@@ -119,14 +119,14 @@ function Promise.prototype:finally(callback)
   return factory(self, callback, function() return dict[self].pstate ~= PStates.Pending end)
 end
 
+-- static methods
+
 function Promise.prototype:__tostring()
   return string.format(
     "Promise { %s }",
     dict[self].pstate == PStates.Fulfilled and tostring(dict[self].pdata) or dict[self].pstate
   )
 end
-
--- static methods
 
 -- check if is a promise
 function Promise:isPromise(any) return instanceof(any, Promise.prototype) end
@@ -137,37 +137,6 @@ end
 
 function Promise:reject(any)
   return Promise:new(function(_, rej) rej(any) end)
-end
-
-function Promise:all(ps)
-  local results, coroutines = {}, {}
-
-  for _, p in ipairs(ps) do
-    table.insert(coroutines, coroutine.create(function()
-      while dict[p].pstate == PStates.Pending do
-        coroutine.yield(true)
-      end
-
-      if dict[p].pstate == PStates.Rejected then
-        error(dict[p].pdata)
-      else
-        table.insert(results, dict[p].pdata)
-      end
-    end))
-  end
-
-  return Promise:new(function(resolve, reject)
-    while #results ~= #ps do
-      local status, err
-      for _, co in ipairs(coroutines) do
-        status, err = coroutine.resume(co)
-
-        if not status then break end
-      end
-      if not status then return reject(err) end
-    end
-    return resolve(results)
-  end)
 end
 
 return Promise

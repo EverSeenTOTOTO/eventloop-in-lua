@@ -6,18 +6,22 @@ return function(ctor, o)
 
   function o:new(...)
     local instance = {
-      __proto__ = o.prototype,
+      __proto__ = self.prototype,
     }
 
-    setmetatable(instance, o.prototype)
-    o.prototype.__index = o.prototype
+    setmetatable(instance, instance.__proto__)
+    instance.__proto__.__index = instance.__proto__
 
     -- ctor can be used to perform extra operations
     return ctor(instance, ...)
   end
 
   function o:extend()
-    local derived = {}
+    local derived = { prototype = { __proto__ = self.prototype } }
+
+    -- derived.prototype = self.prototype:new()
+    setmetatable(derived.prototype, derived.prototype.__proto__)
+    derived.prototype.__proto__.__index = derived.prototype.__proto__
 
     setmetatable(derived, self)
     self.__index = self

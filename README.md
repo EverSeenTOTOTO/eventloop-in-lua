@@ -2,7 +2,7 @@
 
 Simulate the `async/await` syntax sugar in Javascript when writing Lua coroutines...
 
-Note: not really run in parallel since we cannot run microtasks at the same time with naive Lua, so this repo is currently useless,
+Note: not really run in parallel since we cannot run microtasks at the same time with naive Lua, so this repo is currently **useless**,
 I'm looking for solutions like [luv](https://github.com/luvit/luv/blob/master/docs.md#uv_timer_t--timer-handle)...
 
 ```lua
@@ -95,7 +95,7 @@ async {function main() await ... end}
 main() -- will not work!
 ```
 
-The reason for this is that `async` is a wrapper function, and its parameter should be a coroutine function that cannot be executed directly. This is not the same as the Javascript keyword `async.` In this case, the`main` function is more similar to `function* main() yield...` in Javascript.
+The reason is that `async` is a wrapper function, and its parameter should be a coroutine function which cannot be executed directly. This is not the same as Javascript keyword `async`. In the case above, `main` function is more similar to `function* main() yield...` in Javascript.
 
 What you want is probably this:
 

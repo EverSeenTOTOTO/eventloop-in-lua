@@ -4,12 +4,8 @@ local function eventLoop(main, ...)
   local value, status = main(...)
 
   while #pending > 0 do
-    local n = #pending
-    for i = 1, n do
-      pending[i]()
-      table.remove(pending, i)
-      break
-    end
+    pending[1]()
+    table.remove(pending, 1)
   end
 
   return value, status

@@ -5,9 +5,11 @@ return function(lu)
     testPrototype = function()
       local Base = createClass()
       local Derived = Base:extend()
+      local Derived2 = Derived:extend()
 
       lu.assertEquals(Base:isDerived(Derived), true)
-      lu.assertEquals(Base:isDerived {}, false)
+      lu.assertEquals(Base:isDerived(Derived2), true)
+      lu.assertEquals(Derived:isDerived(Derived2), true)
 
       local foo = Base:new()
       local bar = Derived:new()

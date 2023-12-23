@@ -7,18 +7,24 @@ return function(ctor, o)
   -- useful when we want to access class itself in prototype methods
   o.prototype.constructor = o
 
-  local function setprototype(t, p)
+  local function setPrototype(t, p)
     setmetatable(t, p)
     p.__index = p
   end
 
-  -- create instance
-  function o:new(...)
+  local function newInstance(self)
     local instance = {
       __proto__ = self.prototype,
     }
 
-    setprototype(instance, instance.__proto__)
+    setPrototype(instance, instance.__proto__)
+
+    return instance
+  end
+
+  -- create instance
+  function o:new(...)
+    local instance = newInstance(self)
 
     -- ctor can be used to perform extra operations before return instance
     return ctor(instance, self, ...) or instance
@@ -26,19 +32,15 @@ return function(ctor, o)
 
   -- create derived class
   function o:extend()
-    local derived = { prototype = { __proto__ = self.prototype } }
+    local derived = { prototype = newInstance(self) }
 
     derived.prototype.constructor = derived
-
-    setprototype(derived.prototype, derived.prototype.__proto__)
-    setprototype(derived, self)
+    setPrototype(derived, self)
 
     return derived
   end
 
-  function o:isDerived(clazz)
-    return clazz.prototype and clazz.prototype.__proto__ and clazz.prototype.__proto__ == self.prototype or false
-  end
+  function o:isDerived(class) return self:isInstance(class.prototype) end
 
   function o:isInstance(instance)
     local status, proto = pcall(function() return instance.__proto__ end)

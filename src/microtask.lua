@@ -13,5 +13,5 @@ end
 
 return {
   eventLoop = eventLoop,
-  microtask = function(task) table.insert(pending, task) end,
+  schedule = function(task) table.insert(pending, task) end,
 }

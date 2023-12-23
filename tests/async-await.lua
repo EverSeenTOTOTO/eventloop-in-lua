@@ -15,7 +15,7 @@ return function(lu)
       local f = async { function() end }
 
       lu.assertEquals(type(f), "function")
-      lu.assertEquals(Promise:isPromise(f()), true)
+      lu.assertEquals(Promise:isInstance(f()), true)
     end,
 
     testReturn = function()

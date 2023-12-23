@@ -4,31 +4,25 @@ return function(lu)
 
   return {
     testIsPromise = function()
-      lu.assertEquals(Promise:isPromise(42), false)
+      lu.assertEquals(Promise:isInstance(42), false)
 
       local function foo() end
 
-      lu.assertEquals(Promise:isPromise(foo), false)
-      lu.assertEquals(Promise:isPromise(Promise:new(foo)), true)
-    end,
-    testNew = function()
-      local p = Promise:resolve()
-
-      lu.assertEquals(Promise:isPromise(p), true)
-      lu.assertEquals(p.__proto__, Promise.prototype)
+      lu.assertEquals(Promise:isInstance(foo), false)
+      lu.assertEquals(Promise:isInstance(Promise:new(foo)), true)
     end,
     testExtend = function()
       local MyPromise = Promise:extend()
       local p = MyPromise:resolve()
 
-      lu.assertEquals(MyPromise:isPromise(MyPromise), false)
-      lu.assertEquals(MyPromise:isPromise(p), true)
-      -- lu.assertEquals(p.__proto__, MyPromise.prototype)
-      lu.assertEquals(MyPromise.prototype.__proto__, Promise.prototype)
+      lu.assertEquals(MyPromise:isInstance(MyPromise), false)
+      lu.assertEquals(MyPromise:isInstance(p), true)
+      lu.assertEquals(Promise:isInstance(p), true)
+      lu.assertEquals(p:next() ~= p, true)
     end,
     testStaticResolve = function()
       local p = Promise:resolve(42)
-      lu.assertEquals(Promise:isPromise(p), true)
+      lu.assertEquals(Promise:isInstance(p), true)
       lu.assertEquals(Promise:resolve(p), p)
     end,
 
@@ -40,7 +34,7 @@ return function(lu)
         return p:next(function(value) table.insert(r, value) end)
       end)
 
-      lu.assertEquals(Promise:isPromise(tp), true)
+      lu.assertEquals(Promise:isInstance(tp), true)
       lu.assertEquals(r, { 42 })
     end,
 
@@ -48,7 +42,6 @@ return function(lu)
       local r = {}
       eventLoop(function()
         local p = Promise:resolve(42)
-
         local tp = p:next(function(value) return value end)
 
         tp:next(function(value) table.insert(r, value) end)
@@ -61,7 +54,6 @@ return function(lu)
       local r = {}
       eventLoop(function()
         local p = Promise:resolve(42)
-
         local tp = p:next(function(value) error(value) end)
 
         tp:catch(function(value) table.insert(r, value) end)
@@ -78,20 +70,8 @@ return function(lu)
         return p:catch(function(value) table.insert(r, value) end)
       end)
 
-      lu.assertEquals(Promise:isPromise(cp), true)
+      lu.assertEquals(Promise:isInstance(cp), true)
       lu.assertEquals(r, { 42 })
-    end,
-
-    testFinally = function()
-      local r = {}
-      local fp = eventLoop(function()
-        local p = Promise:resolve(42)
-
-        return p:finally(function(any) table.insert(r, any) end)
-      end)
-
-      lu.assertEquals(r, {})
-      lu.assertEquals(Promise:isPromise(fp), true)
     end,
 
     testIgnoring = function()
@@ -104,7 +84,7 @@ return function(lu)
             p
               :next(function() table.insert(r, 24) end) -- should never execute
               :catch(function(value) table.insert(r, value) end)
-              :finally(loop)
+              :next(loop)
           end
         end
 
@@ -138,12 +118,14 @@ return function(lu)
     testNewNested = function()
       local r = {}
       eventLoop(function()
-        Promise:new(function(resolve)
-          Promise:resolve():next(function()
-            table.insert(r, 42)
+        local p = Promise:new(function(resolve)
+          Promise:new(function(resolve2) resolve2(42) end):next(function(val)
+            table.insert(r, val)
             resolve()
           end)
-        end):next(function() table.insert(r, 24) end)
+        end)
+
+        p:next(function() table.insert(r, 24) end)
       end)
 
       lu.assertEquals(r, { 42, 24 })
@@ -199,7 +181,7 @@ return function(lu)
     testMultiSuccessors = function()
       local r = {}
       eventLoop(function()
-        local p1, p2 = Promise.resolve():next(), Promise.resolve():next()
+        local p1, p2 = Promise:resolve():next(), Promise:resolve():next()
         p1:next(function() table.insert(r, 1) end)
         p2:next(function() table.insert(r, 3) end)
         p1:next(function() table.insert(r, 2) end)

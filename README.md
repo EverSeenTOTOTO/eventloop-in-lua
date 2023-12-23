@@ -48,19 +48,21 @@ main()
 
   - `Promise:extend`
 
-  - `Promise:isPromise`
+  - `Promise:isInstance`
+
+  - `Promise:isDerived`
 
   - `Promise:resolve`
 
   - `Promise:reject`
 
-  - `Promise:all`
+  - `Promise:all`(TODO)
 
-  - `Promise:any`
+  - `Promise:any`(TODO)
 
-  - `Promise:race`
+  - `Promise:race`(TODO)
 
-  - `Promise:allSettled`
+  - `Promise:allSettled`(TODO)
 
   Instance methods:
 
@@ -68,7 +70,7 @@ main()
 
   - `promise:catch`
 
-  - `promise:finally`
+  - `promise:finally`(TODO)
 
 + `async`
 

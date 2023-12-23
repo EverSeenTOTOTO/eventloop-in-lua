@@ -1,7 +1,7 @@
 -- part of these codes are stolen from corejs
 
 local createClass = require("src/class")
-local microtask = require("src/microtask").microtask
+local schedule = require("src/microtask").schedule
 
 local PStates = {
   Pending = "Pending",
@@ -13,18 +13,12 @@ local dict = {}
 
 local function notify(p)
   for _, task in ipairs(dict[p].successors) do
-    microtask(task)
+    schedule(task)
   end
 end
 
-local function instanceof(any, proto)
-  local status, is = pcall(function() return any.__proto__ == proto end)
-
-  return status and is
-end
-
-local Promise = createClass(function(self, fn)
-  dict[self] = {
+local Promise = createClass(function(instance, self, fn)
+  dict[instance] = {
     pstate = PStates.Pending,
     successors = {},
     once = false,
@@ -32,27 +26,27 @@ local Promise = createClass(function(self, fn)
 
   local function createCallback(finalState)
     return function(data)
-      if dict[self].once then
+      if dict[instance].once then
         return
       else
-        dict[self].once = true
+        dict[instance].once = true
       end
 
-      if instanceof(data, self.__proto__) then
-        if data == self then error("Promise-chain cycle") end
+      if self:isInstance(data) then -- resolve(Promise)
+        if data == instance then error("Promise-chain cycle") end
 
         data
-          :next(function(value) dict[self].pdata = value end)
-          :catch(function(value) dict[self].pdata = value end)
-          :finally(function()
-            dict[self].pstate = finalState
-            notify(self)
+          :next(function(value) dict[instance].pdata = value end)
+          :catch(function(value) dict[instance].pdata = value end)
+          :next(function()
+            dict[instance].pstate = finalState
+            notify(instance)
           end)
       else
-        dict[self].pdata = data
-        dict[self].pstate = finalState
+        dict[instance].pdata = data
+        dict[instance].pstate = finalState
 
-        notify(self)
+        notify(instance)
       end
     end
   end
@@ -61,15 +55,14 @@ local Promise = createClass(function(self, fn)
   local reject = createCallback(PStates.Rejected)
 
   fn(resolve, reject)
-
-  return self
 end)
 
 -- instance methods
 
 local function factory(self, callback, predicate)
-  return Promise:new(function(resolve, reject)
+  return self.constructor:new(function(resolve, reject)
     local task = function()
+      -- whether to call next/catch callback
       if predicate() then
         local status, result = pcall(callback)
 
@@ -79,7 +72,7 @@ local function factory(self, callback, predicate)
           reject(result)
         end
       else
-        -- skip callback
+        -- skip callback, e.g. Promise:reject(42):next(callback) shuold still returns a promise
         if dict[self].pstate == PStates.Fulfilled then
           resolve(dict[self].pdata)
         else
@@ -91,35 +84,30 @@ local function factory(self, callback, predicate)
     if dict[self].pstate == PStates.Pending then
       table.insert(dict[self].successors, task)
     else
-      microtask(task)
+      schedule(task)
     end
   end)
 end
 
-function Promise.prototype:next(callback)
-  callback = callback or function() end
+function Promise.prototype:next(onFulfilled)
+  onFulfilled = onFulfilled or function() end
   return factory(
     self,
-    function() return callback(dict[self].pdata) end,
+    function() return onFulfilled(dict[self].pdata) end,
     function() return dict[self].pstate == PStates.Fulfilled end
   )
 end
 
-function Promise.prototype:catch(callback)
-  callback = callback or function() end
+function Promise.prototype:catch(onRejected)
+  onRejected = onRejected or function() end
   return factory(
     self,
-    function() return callback(dict[self].pdata) end,
+    function() return onRejected(dict[self].pdata) end,
     function() return dict[self].pstate == PStates.Rejected end
   )
 end
 
-function Promise.prototype:finally(callback)
-  callback = callback or function() end
-  return factory(self, callback, function() return dict[self].pstate ~= PStates.Pending end)
-end
-
--- static methods
+-- TODO: finally
 
 function Promise.prototype:__tostring()
   return string.format(
@@ -128,15 +116,14 @@ function Promise.prototype:__tostring()
   )
 end
 
--- check if is a promise
-function Promise:isPromise(any) return instanceof(any, Promise.prototype) end
+-- static methods
 
 function Promise:resolve(any)
-  return Promise:isPromise(any) and any or Promise:new(function(res) res(any) end)
+  return self:isInstance(any) and any or self:new(function(res) res(any) end)
 end
 
 function Promise:reject(any)
-  return Promise:new(function(_, rej) rej(any) end)
+  return self:new(function(_, rej) rej(any) end)
 end
 
 return Promise

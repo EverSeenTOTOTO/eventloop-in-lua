@@ -13,11 +13,11 @@ local async = function(pack)
 
     if param then -- initial call
       gstatus, promise = coroutine.resume(g, param, ...)
-    else -- recursive call
+    else -- recursive call, use prev yield value
       gstatus, promise = coroutine.resume(g, pdata, pstatus)
     end
 
-    if Promise:isPromise(promise) then -- await
+    if Promise:isInstance(promise) then -- await
       return eventLoop(function()
         return promise
           :next(function(data)
@@ -28,7 +28,7 @@ local async = function(pack)
             pdata = err
             pstatus = false
           end)
-          :finally(resume)
+          :next(resume)
       end)
     else -- return or error
       return gstatus and Promise:resolve(promise) or Promise:reject(promise)

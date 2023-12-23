@@ -20,14 +20,14 @@ return function(lu)
       lu.assertEquals(Derived:isInstance(bar), true)
     end,
     testConstructor = function()
-      local Base = createClass(function(instance, _, foo) instance.foo = foo end)
+      local Base = createClass(function(this, foo) this.foo = foo end)
 
       local bar = Base:new(42)
 
       lu.assertEquals(bar.foo, 42)
     end,
     testProperties = function()
-      local Base = createClass(function(instance, _, foo) instance.foo = foo end)
+      local Base = createClass(function(this, foo) this.foo = foo end)
 
       -- normal method
       function Base.prototype:normal() return self.foo end

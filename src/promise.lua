@@ -17,8 +17,8 @@ local function notify(p)
   end
 end
 
-local Promise = createClass(function(instance, self, fn)
-  dict[instance] = {
+local Promise = createClass(function(this, fn)
+  dict[this] = {
     pstate = PStates.Pending,
     successors = {},
     once = false,
@@ -26,27 +26,27 @@ local Promise = createClass(function(instance, self, fn)
 
   local function createCallback(finalState)
     return function(data)
-      if dict[instance].once then
+      if dict[this].once then
         return
       else
-        dict[instance].once = true
+        dict[this].once = true
       end
 
-      if self:isInstance(data) then -- resolve(Promise)
-        if data == instance then error("Promise-chain cycle") end
+      if this.constructor:isInstance(data) then -- resolve(Promise)
+        if data == this then error("Promise-chain cycle") end
 
         data
-          :next(function(value) dict[instance].pdata = value end)
-          :catch(function(value) dict[instance].pdata = value end)
+          :next(function(value) dict[this].pdata = value end)
+          :catch(function(value) dict[this].pdata = value end)
           :next(function()
-            dict[instance].pstate = finalState
-            notify(instance)
+            dict[this].pstate = finalState
+            notify(this)
           end)
       else
-        dict[instance].pdata = data
-        dict[instance].pstate = finalState
+        dict[this].pdata = data
+        dict[this].pstate = finalState
 
-        notify(instance)
+        notify(this)
       end
     end
   end

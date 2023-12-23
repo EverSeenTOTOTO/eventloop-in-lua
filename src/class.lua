@@ -27,7 +27,7 @@ return function(ctor, o)
     local instance = newInstance(self)
 
     -- ctor can be used to perform extra operations before return instance
-    return ctor(instance, self, ...) or instance
+    return ctor(instance, ...) or instance
   end
 
   -- create derived class

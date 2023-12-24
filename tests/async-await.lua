@@ -2,7 +2,7 @@ return function(lu)
   local async = require("src/main").async
   local await = require("src/main").await
   local Promise = require("src/main").Promise
-  local eventLoop = require("src/microtask").eventLoop
+  local uv = require("luv")
 
   local i = 0
   local function empty()
@@ -24,9 +24,8 @@ return function(lu)
       }
       local r = {}
 
-      eventLoop(function()
-        f():next(function(value) table.insert(r, value) end)
-      end)
+      f():next(function(value) table.insert(r, value) end)
+      uv.run()
 
       lu.assertEquals(r, { 42 })
     end,
@@ -37,9 +36,8 @@ return function(lu)
       }
       local r = {}
 
-      eventLoop(function()
-        f():catch(function(value) table.insert(r, value) end)
-      end)
+      f():catch(function(value) table.insert(r, value) end)
+      uv.run()
 
       lu.assertStrContains(r[1], "42")
     end,
@@ -50,9 +48,8 @@ return function(lu)
       }
       local r = {}
 
-      eventLoop(function()
-        f(24, 18):next(function(value) table.insert(r, value) end)
-      end)
+      f(24, 18):next(function(value) table.insert(r, value) end)
+      uv.run()
 
       lu.assertEquals(r, { 42 })
     end,

@@ -1,5 +1,5 @@
 local Promise = require("src/promise")
-local eventLoop = require("src/microtask").eventLoop
+local uv = require("luv")
 
 local function await(pack) return coroutine.yield(Promise:resolve(pack[1])) end
 
@@ -18,24 +18,26 @@ local async = function(pack)
     end
 
     if Promise:isInstance(promise) then -- await
-      return eventLoop(function()
-        return promise
-          :next(function(data)
-            pdata = data
-            pstatus = true
-          end)
-          :catch(function(err)
-            pdata = err
-            pstatus = false
-          end)
-          :next(resume)
-      end)
+      return promise
+        :next(function(data)
+          pdata = data
+          pstatus = true
+        end)
+        :catch(function(err)
+          pdata = err
+          pstatus = false
+        end)
+        :next(resume)
     else -- return or error
       return gstatus and Promise:resolve(promise) or Promise:reject(promise)
     end
   end
 
-  return resume
+  return function(...)
+    local r = resume(...)
+    uv.run()
+    return r
+  end
 end
 
 return {

@@ -2,17 +2,22 @@
 
 Simulate the `async/await` syntax sugar in Javascript when writing Lua coroutines...
 
-Note: not really run in parallel since we cannot run microtasks at the same time with naive Lua, so this repo is currently **useless**,
-I'm looking for solutions like [luv](https://github.com/luvit/luv/blob/master/docs.md#uv_timer_t--timer-handle)...
-
 ```lua
--- create long time running task
-local function sleep(name, cost)
+local uv = require('luv')
+
+local function setTimeout(callback, delay)
+  local t = uv.new_timer()
+  uv.timer_start(t, delay, 0, function()
+    uv.timer_stop(t)
+    uv.close(t)
+    callback()
+  end)
+  return t
+end
+
+local function sleep(cost)
   return Promise:new(function(resolve)
-    local start = os.clock()
-    while os.clock() - start <= cost do
-    end
-    resolve(name .. " done!")
+    setTimeout(resolve, cost)
   end)
 end
 
@@ -20,16 +25,9 @@ local main = async {
   function()
     local start = os.time()
 
-    local result = await { Promise:all {
-      sleep("A", 1),
-      sleep("B", 2)
-    } }
+    await { sleep(1000) }
 
-    for _, v in ipairs(result) do
-      print(v)
-    end
-
-    print(string.format("elapsed %fs", os.time() - start)) -- elapsed 3.000000s, not 2.000000s
+    print(string.format("elapsed %fs", os.time() - start)) -- elapsed 1.000000s
   end,
 }
 

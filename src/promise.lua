@@ -1,7 +1,7 @@
 -- part of these codes are stolen from corejs
 
 local createClass = require("src/class")
-local schedule = require("src/microtask").schedule
+local uv = require("luv")
 
 local PStates = {
   Pending = "Pending",
@@ -10,6 +10,11 @@ local PStates = {
 }
 
 local dict = {}
+
+local function schedule(task)
+  local work = uv.new_work(function() end, task)
+  uv.queue_work(work)
+end
 
 local function notify(p)
   for _, task in ipairs(dict[p].successors) do
@@ -32,7 +37,7 @@ local Promise = createClass(function(this, fn)
         dict[this].once = true
       end
 
-      if this.constructor:isInstance(data) then -- resolve(Promise)
+      if this.constructor:isInstance(data) then -- resolve(another promise)
         if data == this then error("Promise-chain cycle") end
 
         data

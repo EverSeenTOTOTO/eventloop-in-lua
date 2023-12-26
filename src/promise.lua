@@ -1,7 +1,7 @@
 -- part of these codes are stolen from corejs
 
 local createClass = require("src/class")
-local uv = require("luv")
+local eventLoop = require("src/eventLoop")
 
 local PStates = {
   Pending = "Pending",
@@ -11,14 +11,9 @@ local PStates = {
 
 local dict = {}
 
-local function schedule(task)
-  local work = uv.new_work(function() end, task)
-  uv.queue_work(work)
-end
-
-local function notify(p)
+local function notifySuccesor(p)
   for _, task in ipairs(dict[p].successors) do
-    schedule(task)
+    eventLoop.queueMicrotask(task)
   end
 end
 
@@ -45,13 +40,13 @@ local Promise = createClass(function(this, fn)
           :catch(function(value) dict[this].pdata = value end)
           :next(function()
             dict[this].pstate = finalState
-            notify(this)
+            notifySuccesor(this)
           end)
       else
         dict[this].pdata = data
         dict[this].pstate = finalState
 
-        notify(this)
+        notifySuccesor(this)
       end
     end
   end
@@ -89,7 +84,7 @@ local function factory(self, callback, predicate)
     if dict[self].pstate == PStates.Pending then
       table.insert(dict[self].successors, task)
     else
-      schedule(task)
+      eventLoop.queueMicrotask(task)
     end
   end)
 end

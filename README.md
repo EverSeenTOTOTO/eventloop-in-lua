@@ -1,73 +1,92 @@
-# async-await-in-lua
+# eventloop-in-lua
 
-Simulate the `async/await` syntax sugar in Javascript when writing Lua coroutines...
+Simulate the `async/await` syntax sugar and the eventloop behavior in Javascript when using Lua coroutines...
 
 ```lua
-local uv = require('luv')
-
-local function setTimeout(callback, delay)
-  local t = uv.new_timer()
-  uv.timer_start(t, delay, 0, function()
-    uv.timer_stop(t)
-    uv.close(t)
-    callback()
-  end)
-  return t
-end
+local uv = require("luv")
 
 local function sleep(cost)
   return Promise:new(function(resolve)
-    setTimeout(resolve, cost)
+    eventLoop.setTimeout(resolve, cost)
   end)
+end
+
+local readFile = function(path, callback)
+  local fd = assert(uv.fs_open(path, "r", 438))
+  local stat = assert(uv.fs_fstat(fd))
+  local data = assert(uv.fs_read(fd, stat.size, 0))
+  assert(uv.fs_close(fd))
+  callback(data)
+  eventLoop.flushMicrotasks() -- to emulate NodeJS behavior, we need to flush microtasks manually
+end
+
+local readFilePromise = function(path)
+  return Promise:new(function(resolve)
+    readFile(path, resolve)
+  end)
+end
+
+local start = uv.hrtime()
+local count = function(name)
+  return function()
+    print(string.format("%s elapsed %fs", name, (uv.hrtime() - start) / 1e6))
+  end
 end
 
 local main = async {
   function()
-    local start = os.time()
-
+    -- try remove await{} here to see what happens
+    await { sleep(500):next(count('timer')) }
+    await { readFilePromise('README.md'):next(count('io')) }
     await { sleep(1000) }
-
-    print(string.format("elapsed %fs", os.time() - start)) -- elapsed 1.000000s
+    count('main')()
   end,
 }
 
-main()
+eventLoop.startEventLoop(main)
+```
+
+Output:
+
+```
+timer elapsed 497.526845s
+io elapsed 497.931135s
+main elapsed 997.841181s
 ```
 
 ## API
 
   See [tests](./tests) for more examples.
 
++ `eventLoop`
+
+  - `setTimeout(callback, delay)`
+  - `clearTimeout(timer)`
+  - `setInterval(callback, delay)`
+  - `clearInterval(timer)`
+  - `queueMicrotask(microtask)`
+  - `flushMicrotasks()`
+  - `startEventLoop(main)`
+
 + `Promise`
 
   Static methods:
 
-  - `Promise:new`
-
-  - `Promise:extend`
-
-  - `Promise:isInstance`
-
-  - `Promise:isDerived`
-
-  - `Promise:resolve`
-
-  - `Promise:reject`
-
+  - `Promise:new(executor)`
+  - `Promise:extend(class)`
+  - `Promise:isInstance(instance)`
+  - `Promise:isDerived(class)`
+  - `Promise:resolve(data)`
+  - `Promise:reject(err)`
   - `Promise:all`(TODO)
-
   - `Promise:any`(TODO)
-
   - `Promise:race`(TODO)
-
   - `Promise:allSettled`(TODO)
 
   Instance methods:
 
-  - `promise:next`
-
-  - `promise:catch`
-
+  - `promise:next(onFulfilled)`
+  - `promise:catch(onRejected)`
   - `promise:finally`(TODO)
 
 + `async`

@@ -1,10 +1,6 @@
 return function(lu)
   local Promise = require("src/promise")
-  local uv = require("luv")
-  local eventLoop = function(fn)
-    fn()
-    uv.run()
-  end
+  local eventLoop = require("src/eventLoop")
 
   return {
     testIsPromise = function()
@@ -29,10 +25,10 @@ return function(lu)
       lu.assertEquals(Promise:isInstance(p), true)
       lu.assertEquals(Promise:resolve(p), p)
     end,
-
     testThen = function()
       local r = {}
-      local tp = eventLoop(function()
+
+      eventLoop.startEventLoop(function()
         local p = Promise:resolve(42)
 
         return p:next(function(value) table.insert(r, value) end)
@@ -40,10 +36,10 @@ return function(lu)
 
       lu.assertEquals(r, { 42 })
     end,
-
     testThenReturn = function()
       local r = {}
-      eventLoop(function()
+
+      eventLoop.startEventLoop(function()
         local p = Promise:resolve(42)
         local tp = p:next(function(value) return value end)
 
@@ -52,10 +48,10 @@ return function(lu)
 
       lu.assertEquals(r, { 42 })
     end,
-
     testThenThrow = function()
       local r = {}
-      eventLoop(function()
+
+      eventLoop.startEventLoop(function()
         local p = Promise:resolve(42)
         local tp = p:next(function(value) error(value) end)
 
@@ -64,10 +60,10 @@ return function(lu)
 
       lu.assertStrContains(r[1], "42")
     end,
-
     testCatch = function()
       local r = {}
-      local cp = eventLoop(function()
+
+      eventLoop.startEventLoop(function()
         local p = Promise:new(function(_, rej) rej(42) end)
 
         return p:catch(function(value) table.insert(r, value) end)
@@ -75,10 +71,10 @@ return function(lu)
 
       lu.assertEquals(r, { 42 })
     end,
-
     testIgnoring = function()
       local r = {}
-      eventLoop(function()
+
+      eventLoop.startEventLoop(function()
         local p = Promise:new(function(_, rej) rej(42) end)
 
         local function loop()
@@ -95,10 +91,10 @@ return function(lu)
 
       lu.assertEquals(r, { 42, 42, 42 })
     end,
-
     testPersistState = function()
       local r = {}
-      eventLoop(function()
+
+      eventLoop.startEventLoop(function()
         Promise:new(function(resolve, reject)
           resolve()
           reject() -- no effect
@@ -116,10 +112,10 @@ return function(lu)
 
       lu.assertEquals(r, {})
     end,
-
     testNewNested = function()
       local r = {}
-      eventLoop(function()
+
+      eventLoop.startEventLoop(function()
         local p = Promise:new(function(resolve)
           Promise:new(function(resolve2) resolve2(42) end):next(function(val)
             table.insert(r, val)
@@ -132,10 +128,10 @@ return function(lu)
 
       lu.assertEquals(r, { 42, 24 })
     end,
-
     testResolveNested = function()
       local r = {}
-      eventLoop(function()
+
+      eventLoop.startEventLoop(function()
         Promise:new(function(resolve)
           resolve(Promise:resolve(42):next(function(value) return value end))
           resolve(24)
@@ -144,10 +140,10 @@ return function(lu)
 
       lu.assertEquals(r, { 42 })
     end,
-
     testThenReturnNested = function()
       local r = {}
-      eventLoop(function()
+
+      eventLoop.startEventLoop(function()
         Promise:resolve()
           :next(function()
             return Promise:resolve():next(function() table.insert(r, 1) end):next(function() table.insert(r, 2) end)
@@ -157,10 +153,10 @@ return function(lu)
 
       lu.assertEquals(r, { 1, 2, 3 })
     end,
-
     testThenNested = function()
       local r = {}
-      eventLoop(function()
+
+      eventLoop.startEventLoop(function()
         Promise:resolve()
           :next(function()
             Promise:resolve():next(function() table.insert(r, 1) end):next(function() table.insert(r, 3) end)
@@ -170,26 +166,24 @@ return function(lu)
 
       lu.assertEquals(r, { 1, 2, 3 })
     end,
+    testCycle = function()
+      lu.assertErrorMsgContains("Promise-chain cycle", function()
+        eventLoop.startEventLoop(function()
+          local p
+          p = Promise:resolve():next(function() return p end)
+        end)
+      end)
+    end,
+    testMultiSuccessors = function()
+      local r = {}
+      eventLoop.startEventLoop(function()
+        local p1, p2 = Promise:resolve():next(), Promise:resolve():next()
+        p1:next(function() table.insert(r, 1) end)
+        p2:next(function() table.insert(r, 3) end)
+        p1:next(function() table.insert(r, 2) end)
+      end)
 
-    -- testCycle = function()
-    --   lu.assertErrorMsgContains("Promise-chain cycle", function()
-    --     eventLoop(function()
-    --       local p
-    --       p = Promise:resolve():next(function() return p end)
-    --     end)
-    --   end)
-    -- end,
-
-    -- testMultiSuccessors = function()
-    --   local r = {}
-    --   eventLoop(function()
-    --     local p1, p2 = Promise:resolve():next(), Promise:resolve():next()
-    --     p1:next(function() table.insert(r, 1) end)
-    --     p2:next(function() table.insert(r, 3) end)
-    --     p1:next(function() table.insert(r, 2) end)
-    --   end)
-
-    --   lu.assertEquals(r, { 1, 2, 3 })
-    -- end,
+      lu.assertEquals(r, { 1, 2, 3 })
+    end,
   }
 end

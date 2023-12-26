@@ -2,7 +2,7 @@ return function(lu)
   local async = require("src/main").async
   local await = require("src/main").await
   local Promise = require("src/main").Promise
-  local uv = require("luv")
+  local eventLoop = require("src/main").eventLoop
 
   local i = 0
   local function empty()
@@ -17,7 +17,6 @@ return function(lu)
       lu.assertEquals(type(f), "function")
       lu.assertEquals(Promise:isInstance(f()), true)
     end,
-
     testReturn = function()
       local f = async {
         function() return 42 end,
@@ -25,11 +24,10 @@ return function(lu)
       local r = {}
 
       f():next(function(value) table.insert(r, value) end)
-      uv.run()
+      eventLoop.startEventLoop(f)
 
       lu.assertEquals(r, { 42 })
     end,
-
     testThrow = function()
       local f = async {
         function() error(42) end,
@@ -37,11 +35,10 @@ return function(lu)
       local r = {}
 
       f():catch(function(value) table.insert(r, value) end)
-      uv.run()
+      eventLoop.startEventLoop(f)
 
       lu.assertStrContains(r[1], "42")
     end,
-
     testParam = function()
       local f = async {
         function(x, y) return x + y end,
@@ -49,11 +46,10 @@ return function(lu)
       local r = {}
 
       f(24, 18):next(function(value) table.insert(r, value) end)
-      uv.run()
+      eventLoop.startEventLoop(f)
 
       lu.assertEquals(r, { 42 })
     end,
-
     testAwaitReturn = function()
       local r = {}
       local f = async {
@@ -65,10 +61,10 @@ return function(lu)
         end,
       }
 
-      f()
+      eventLoop.startEventLoop(f)
+
       lu.assertEquals(r, { 42, true })
     end,
-
     testAwaitThrow = function()
       local r = {}
       local f = async {
@@ -80,10 +76,10 @@ return function(lu)
         end,
       }
 
-      f()
+      eventLoop.startEventLoop(f)
+
       lu.assertEquals(r, { 42, false })
     end,
-
     testAwaitNested = function()
       local r = {}
       local f = async {
@@ -93,10 +89,11 @@ return function(lu)
           table.insert(r, value)
         end,
       }
-      f()
+
+      eventLoop.startEventLoop(f)
+
       lu.assertEquals(r, { 42 })
     end,
-
     testNested = function()
       local r = {}
       local f = async {
@@ -116,7 +113,9 @@ return function(lu)
           }
         end,
       }
-      f()
+
+      eventLoop.startEventLoop(f)
+
       lu.assertEquals(r, { 42 })
     end,
   }

@@ -80,9 +80,9 @@ return function(lu)
         local function loop()
           if #r < 3 then
             p
-              :next(function() table.insert(r, 24) end) -- should never execute
-              :catch(function(value) table.insert(r, value) end)
-              :next(loop)
+                :next(function() table.insert(r, 24) end) -- should never execute
+                :catch(function(value) table.insert(r, value) end)
+                :next(loop)
           end
         end
 
@@ -97,14 +97,14 @@ return function(lu)
       eventLoop.startEventLoop(function()
         Promise:new(function(resolve, reject)
           resolve()
-          reject() -- no effect
+          reject()            -- no effect
         end):catch(function()
           table.insert(r, 42) -- should never execute
         end)
 
         Promise:new(function(resolve, reject)
           reject()
-          resolve() -- no effect
+          resolve()           -- no effect
         end):next(function()
           table.insert(r, 42) -- should never execute
         end)
@@ -145,10 +145,10 @@ return function(lu)
 
       eventLoop.startEventLoop(function()
         Promise:resolve()
-          :next(function()
-            return Promise:resolve():next(function() table.insert(r, 1) end):next(function() table.insert(r, 2) end)
-          end)
-          :next(function() table.insert(r, 3) end)
+            :next(function()
+              return Promise:resolve():next(function() table.insert(r, 1) end):next(function() table.insert(r, 2) end)
+            end)
+            :next(function() table.insert(r, 3) end)
       end)
 
       lu.assertEquals(r, { 1, 2, 3 })
@@ -158,21 +158,23 @@ return function(lu)
 
       eventLoop.startEventLoop(function()
         Promise:resolve()
-          :next(function()
-            Promise:resolve():next(function() table.insert(r, 1) end):next(function() table.insert(r, 3) end)
-          end)
-          :next(function() table.insert(r, 2) end)
+            :next(function()
+              Promise:resolve():next(function() table.insert(r, 1) end):next(function() table.insert(r, 3) end)
+            end)
+            :next(function() table.insert(r, 2) end)
       end)
 
       lu.assertEquals(r, { 1, 2, 3 })
     end,
     testCycle = function()
-      lu.assertErrorMsgContains("Promise-chain cycle", function()
+      local _, err = pcall(function()
         eventLoop.startEventLoop(function()
           local p
           p = Promise:resolve():next(function() return p end)
         end)
       end)
+
+      lu.assertStrContains(err, "Promise-chain cycle")
     end,
     testMultiSuccessors = function()
       local r = {}

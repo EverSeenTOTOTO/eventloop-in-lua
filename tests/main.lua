@@ -1,18 +1,22 @@
-local uv = require('luv')
+local uv = require("luv")
+local el = require("src/eventLoop")
 
 local lu = {
-  assertEquals = function(lhs, rhs)
-    if type(lhs) == 'table' and type(rhs) == 'table' then
+  done = function(msg) assert(msg == nil, msg) end,
+  assertEquals = function(lhs, rhs, msg)
+    if type(lhs) == "table" and type(rhs) == "table" then
       for i = 1, #lhs do
         if lhs[i] ~= rhs[i] then return false end
       end
       return true
     end
 
-    assert(lhs == rhs)
+    assert(lhs == rhs, msg)
   end,
-  assertStrContains = function(str, pattern)
-    assert(string.find(str, pattern))
+  assertStrContains = function(str, pattern, msg) assert(string.find(str, pattern:gsub("-", "%%-")), msg) end,
+  assertThrows = function(fn, msg)
+    local status = pcall(fn)
+    assert(not status, msg)
   end,
 }
 
@@ -23,11 +27,9 @@ local function scandir(path)
     local name, typo = uv.fs_scandir_next(fd)
 
     if name ~= nil then
-      if name:sub(-3) == 'lua' then
-        table.insert(children, path .. '/' .. name:sub(0, -5))
-      end
-      if typo == 'directory' then
-        for _, kid in ipairs(scandir(path .. '/' .. name)) do
+      if name:sub(-3) == "lua" then table.insert(children, path .. "/" .. name:sub(0, -5)) end
+      if typo == "directory" then
+        for _, kid in ipairs(scandir(path .. "/" .. name)) do
           table.insert(children, kid)
         end
       end
@@ -41,11 +43,11 @@ end
 local function runTests(path)
   local files = scandir(path)
   for _, file in ipairs(files) do
-    if file ~= 'tests/main' then
+    if not file:find("tests/main") then
       local ret = require(file)(lu)
-      if type(ret) == 'table' then
+      if type(ret) == "table" then
         for name, test in pairs(ret) do
-          test()
+          el.startEventLoop(test)
           print(string.format("%s\t%s:%s", "PASS", file, name))
         end
       else
@@ -55,4 +57,4 @@ local function runTests(path)
   end
 end
 
-runTests('tests')
+runTests("tests")

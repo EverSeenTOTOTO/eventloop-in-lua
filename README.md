@@ -17,10 +17,11 @@ local readFile = function(path, callback)
   local data = assert(uv.fs_read(fd, stat.size, 0))
   assert(uv.fs_close(fd))
   callback(data)
-  eventLoop.flushMicrotasks() -- to emulate NodeJS behavior, we need to flush microtasks manually
+  -- to emulate NodeJS behavior, we need to flush microtasks manually after each (macro)task
+  eventLoop.flushMicrotasks()
 end
 
-local readFilePromise = function(path)
+local readFileAsync = function(path)
   return Promise:new(function(resolve)
     readFile(path, resolve)
   end)
@@ -37,7 +38,7 @@ local main = async {
   function()
     -- try remove await{} here to see what happens
     await { sleep(500):next(count('timer')) }
-    await { readFilePromise('README.md'):next(count('io')) }
+    await { readFileAsync('README.md'):next(count('io')) }
     await { sleep(1000) }
     count('main')()
   end,
@@ -105,7 +106,7 @@ main elapsed 997.841181s
   end}
   ```
 
-## Important Notes
+## Important Note
 
 You may write codes like this:
 

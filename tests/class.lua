@@ -47,6 +47,9 @@ return function(lu)
 
       lu.assertEquals(Derived:isInstance(baz), true)
       lu.assertEquals(baz:normal(), 0)
+
+      baz.foo = 1
+      lu.assertEquals(baz:normal(), 1)
     end,
   }
 end

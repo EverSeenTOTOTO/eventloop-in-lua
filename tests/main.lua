@@ -20,6 +20,14 @@ local lu = {
   end,
 }
 
+local function runGroupTests(path)
+  local tests = require(path)(lu)
+  for key, test in pairs(tests) do
+    test()
+    print(string.format("PASS: %s:%s", path, key))
+  end
+end
+
 local function scandir(path)
   local fd = assert(uv.fs_scandir(path))
   local children = {}
@@ -42,19 +50,16 @@ end
 
 local function runTests(path)
   local files = scandir(path)
+
   for _, file in ipairs(files) do
-    if not file:find("tests/main") then
-      local ret = require(file)(lu)
-      if type(ret) == "table" then
-        for name, test in pairs(ret) do
-          el.startEventLoop(test)
-          print(string.format("%s\t%s:%s", "PASS", file, name))
-        end
-      else
-        print(string.format("%s\t%s", "PASS", file))
-      end
-    end
+    local test = require(file)
+
+    el.startEventLoop(function() test(lu) end)
+    print(string.format("PASS: %s", file))
   end
 end
 
-runTests("tests")
+runGroupTests("tests/class")
+runGroupTests("tests/event-loop")
+runTests("tests/Promise")
+runGroupTests("tests/async-await")

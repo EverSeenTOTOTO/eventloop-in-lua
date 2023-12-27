@@ -29,25 +29,27 @@ local Promise = createClass(function(this, fn)
     return function(data)
       if dict[this].pstate ~= PStates.Pending then return end
 
-      if this.constructor:isInstance(data) then -- resolve(another promise)
+      local done = function(value)
+        dict[this].pdata = value
+        dict[this].pstate = finalState
+        notifySuccesor(this)
+      end
+
+      if data and type(data.next) == "function" then -- resolve(thenable)
         if data == this then
           dict[this].pdata = "Promise-chain cycle"
           dict[this].pstate = PStates.Rejected
           return
         end
 
-        data
-            :next(function(value) dict[this].pdata = value end)
-            :catch(function(value) dict[this].pdata = value end)
-            :next(function()
-              dict[this].pstate = finalState
-              notifySuccesor(this)
-            end)
-      else
-        dict[this].pdata = data
-        dict[this].pstate = finalState
+        local poisonedStatus, poisonedResult = pcall(function() return data:next(done, done) end)
 
-        notifySuccesor(this)
+        -- next method has been poisoned
+        if data.next ~= this.constructor.prototype.next then
+          createCallback(poisonedStatus and PStates.Fulfilled or PStates.Rejected)(poisonedResult)
+        end
+      else
+        done(data)
       end
     end
   end
@@ -66,30 +68,30 @@ end)
 
 function Promise.prototype:next(onFulfilled, onRejected)
   return self.constructor:new(function(resolve, reject)
+    local function done(callback)
+      local status, result = pcall(callback)
+
+      if status then
+        resolve(result)
+      else
+        reject(result)
+      end
+    end
+
     local task = function()
       if dict[self].pstate == PStates.Fulfilled then
-        local status, result = pcall(function() return onFulfilled(dict[self].pdata) end)
-
-        if status then
-          resolve(result)
-        else
-          reject(result)
-        end
+        done(function() return onFulfilled(dict[self].pdata) end)
       elseif dict[self].pstate == PStates.Rejected then
-        local status, result = pcall(function() return onRejected(dict[self].pdata) end)
-
-        if status then
-          resolve(result)
-        else
-          reject(result)
-        end
+        done(function() return onRejected(dict[self].pdata) end)
       else
         -- skip callback, e.g. Promise:reject(42):next(callback)
-        if dict[self].pstate == PStates.Fulfilled then
-          resolve(dict[self].pdata)
-        else
-          reject(dict[self].pdata)
-        end
+        done(function()
+          if dict[self].pstate == PStates.Fulfilled then
+            return dict[self].pdata
+          else
+            error(dict[self].pdata)
+          end
+        end)
       end
     end
 
@@ -102,33 +104,7 @@ function Promise.prototype:next(onFulfilled, onRejected)
 end
 
 function Promise.prototype:catch(onRejected)
-  return self.constructor:new(function(resolve, reject)
-    local task = function()
-      -- whether to call next/catch callback
-      if dict[self].pstate == PStates.Rejected then
-        local status, result = pcall(function() return onRejected(dict[self].pdata) end)
-
-        if status then
-          resolve(result)
-        else
-          reject(result)
-        end
-      else
-        -- skip callback, e.g. Promise:reject(42):next(callback) shuold still returns a promise
-        if dict[self].pstate == PStates.Fulfilled then
-          resolve(dict[self].pdata)
-        else
-          reject(dict[self].pdata)
-        end
-      end
-    end
-
-    if dict[self].pstate == PStates.Pending then
-      table.insert(dict[self].successors, task)
-    else
-      eventLoop.queueMicrotask(task)
-    end
-  end)
+  return self:next(function(x) return x end, onRejected)
 end
 
 function Promise.prototype:__tostring()

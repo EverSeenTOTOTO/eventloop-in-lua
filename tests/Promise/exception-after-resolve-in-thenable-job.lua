@@ -12,7 +12,7 @@ return function(lu)
     end,
   }
 
-  local function executor(resolve, reject) resolve(thenableWithError) end
+  local function executor(resolve) resolve(thenableWithError) end
 
   Promise:new(executor):next(lu.done, lu.done)
 end

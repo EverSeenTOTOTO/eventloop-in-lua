@@ -1,6 +1,6 @@
 # eventloop-in-lua
 
-Simulate the `async/await` syntax sugar and the eventloop behavior in Javascript when using Lua coroutines...
+Simulate the `async/await` syntax sugar and the eventloop behavior in Javascript when using Lua coroutines, based on [luv](https://github.com/luvit/luv/tree/master).
 
 ```lua
 local uv = require("luv")
@@ -86,7 +86,7 @@ main elapsed 997.841181s
 
   Instance methods:
 
-  - `promise:next(onFulfilled)`
+  - `promise:next(onFulfilled, onRejected)`
   - `promise:catch(onRejected)`
   - `promise:finally`(TODO)
 

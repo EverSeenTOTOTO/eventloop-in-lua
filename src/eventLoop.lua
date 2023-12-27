@@ -48,5 +48,6 @@ return {
     main()
     flushMicrotasks()
     uv.run("default")
+    assert(#microtasks == 0, "microtask queue should be empty after event loop")
   end,
 }

@@ -10,7 +10,7 @@ local async = function(pack)
 
     if Promise:isInstance(promise) then -- await
       return promise:next(function(data) resume(data, true) end, function(err) resume(err, false) end)
-    else                                -- return or error
+    else -- return or error
       return status and Promise:resolve(promise) or Promise:reject(promise)
     end
   end

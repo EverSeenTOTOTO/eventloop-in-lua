@@ -12,7 +12,7 @@ return function(lu)
       return
     end
 
-    lu.assertStrContains(reason, "self resolution", "The promise should be rejected with a TypeError instance.")
+    lu.assertStrContains(reason, "Promise-chain cycle", "The promise should be rejected with a TypeError instance.")
   end)
 
   returnValue = resolve(promise)

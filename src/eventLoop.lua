@@ -1,6 +1,7 @@
 local uv = require("luv")
+local internal = require("src/internal")
 
-local microtasks = {}
+local microtasks = internal.microtasks
 
 local function flushMicrotasks()
   while #microtasks > 0 do
@@ -49,5 +50,10 @@ return {
     flushMicrotasks()
     uv.run("default")
     assert(#microtasks == 0, "microtask queue should be empty after event loop")
+    assert(
+      #internal.unhandledRejections == 0,
+      string.format("unhandledRejection detected:\n\t%s", tostring(internal.unhandledRejections[1]))
+    )
+    internal.dict = {}
   end,
 }

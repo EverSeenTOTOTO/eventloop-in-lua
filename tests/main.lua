@@ -15,42 +15,30 @@ local lu = {
       fail("done() called more than once")
     end
 
-    if msg ~= nil then
-      fail(msg)
-    end
+    if msg ~= nil then fail(msg) end
   end,
   assertEquals = function(lhs, rhs, msg)
     msg = msg or "assertEquals failed"
     if type(lhs) == "table" and type(rhs) == "table" then
-      if #lhs ~= #rhs then
-        fail(msg)
-      end
+      if #lhs ~= #rhs then fail(msg) end
       for i = 1, #lhs do
-        if lhs[i] ~= rhs[i] then
-          fail(msg)
-        end
+        if lhs[i] ~= rhs[i] then fail(msg) end
       end
       return
     end
 
-    if lhs ~= rhs then
-      fail(msg)
-    end
+    if lhs ~= rhs then fail(msg) end
   end,
   assertStrContains = function(str, pattern, msg)
     msg = msg or "assertStrContains failed"
 
-    if not string.find(str, pattern:gsub("-", "%%-")) then
-      fail(msg)
-    end
+    if not string.find(str, pattern:gsub("-", "%%-")) then fail(msg) end
   end,
   assertThrows = function(fn, msg)
     msg = msg or "assertThrows failed"
 
     local status, r = pcall(fn)
-    if status then
-      fail(msg)
-    end
+    if status then fail(msg) end
   end,
 }
 

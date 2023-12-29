@@ -2,14 +2,16 @@
 
 local createClass = require("src/class")
 local eventLoop = require("src/eventLoop")
+local internal = require("src/internal")
+
+local dict = internal.dict
+local unhandledRejections = internal.unhandledRejections
 
 local PStates = {
   Pending = "Pending",
   Fulfilled = "Fulfilled",
   Rejected = "Rejected",
 }
-
-local dict = {}
 
 local function notifySuccesor(p)
   while #dict[p].successors > 0 do
@@ -34,16 +36,18 @@ local Promise = createClass(function(this, fn)
     return function(data)
       if dict[this].pstate ~= PStates.Pending then return end
 
-      local done = function(value)
+      local done = function(value, customState)
         dict[this].pdata = value
-        dict[this].pstate = finalState
+        dict[this].pstate = customState or finalState
+
+        if dict[this].pstate == PStates.Rejected then table.insert(unhandledRejections, dict[this].pdata) end
+
         notifySuccesor(this)
       end
 
       if data and isThenable(data) then -- resolve(thenable)
         if data == this then
-          dict[this].pdata = "Promise-chain cycle"
-          dict[this].pstate = PStates.Rejected
+          done("Promise-chain cycle", PStates.Rejected)
           return
         end
 
@@ -93,6 +97,15 @@ function Promise.prototype:next(onFulfilled, onRejected)
     end
 
     local task = function()
+      if dict[self].pstate == PStates.Rejected then
+        for i, err in ipairs(unhandledRejections) do
+          if err == dict[self].pdata then
+            table.remove(unhandledRejections, i)
+            break
+          end
+        end
+      end
+
       if dict[self].pstate == PStates.Fulfilled then
         done(function() return onFulfilled(dict[self].pdata) end)
       elseif dict[self].pstate == PStates.Rejected then

@@ -12,8 +12,7 @@ return function(lu)
 
   return {
     testEmpty = function()
-      local f = async { function()
-      end }
+      local f = async { function() end }
 
       lu.assertEquals(type(f), "function")
       lu.assertEquals(Promise:isInstance(f()), true)
@@ -24,8 +23,9 @@ return function(lu)
       }
       local r = {}
 
-      f():next(function(value) table.insert(r, value) end)
-      eventLoop.startEventLoop(f)
+      eventLoop.startEventLoop(function()
+        f():next(function(value) table.insert(r, value) end)
+      end)
 
       lu.assertEquals(r, { 42 })
     end,
@@ -35,8 +35,9 @@ return function(lu)
       }
       local r = {}
 
-      f():catch(function(value) table.insert(r, value) end)
-      eventLoop.startEventLoop(f)
+      eventLoop.startEventLoop(function()
+        f():catch(function(value) table.insert(r, value) end)
+      end)
 
       lu.assertStrContains(r[1], "42")
     end,
@@ -46,8 +47,9 @@ return function(lu)
       }
       local r = {}
 
-      f(24, 18):next(function(value) table.insert(r, value) end)
-      eventLoop.startEventLoop(f)
+      eventLoop.startEventLoop(function()
+        f(24, 18):next(function(value) table.insert(r, value) end)
+      end)
 
       lu.assertEquals(r, { 42 })
     end,

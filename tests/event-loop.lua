@@ -56,7 +56,6 @@ return function(lu)
       end
 
       el.setTimeout(block, 1)
-
       el.startEventLoop(el.flushMicrotasks)
 
       lu.assertEquals(r, {})

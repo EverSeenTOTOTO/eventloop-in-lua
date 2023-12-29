@@ -5,7 +5,6 @@ local eventLoop = require("src/eventLoop")
 local internal = require("src/internal")
 
 local dict = internal.dict
-local unhandledRejections = internal.unhandledRejections
 
 local PStates = {
   Pending = "Pending",
@@ -40,7 +39,7 @@ local Promise = createClass(function(this, fn)
         dict[this].pdata = value
         dict[this].pstate = customState or finalState
 
-        if dict[this].pstate == PStates.Rejected then table.insert(unhandledRejections, dict[this].pdata) end
+        if dict[this].pstate == PStates.Rejected then dict[this].unhandled = true end
 
         notifySuccesor(this)
       end
@@ -97,14 +96,7 @@ function Promise.prototype:next(onFulfilled, onRejected)
     end
 
     local task = function()
-      if dict[self].pstate == PStates.Rejected then
-        for i, err in ipairs(unhandledRejections) do
-          if err == dict[self].pdata then
-            table.remove(unhandledRejections, i)
-            break
-          end
-        end
-      end
+      if dict[self].pstate == PStates.Rejected then dict[self].unhandled = false end
 
       if dict[self].pstate == PStates.Fulfilled then
         done(function() return onFulfilled(dict[self].pdata) end)

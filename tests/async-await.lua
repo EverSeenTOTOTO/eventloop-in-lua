@@ -142,5 +142,12 @@ return function(lu)
       lu.assertEquals(called, true)
       lu.assertEquals(r, {})
     end,
+    testUnhandledRejection = function()
+      lu.assertThrows(function()
+        eventLoop.startEventLoop(async {
+          function() Promise:reject(42) end,
+        })
+      end)
+    end,
   }
 end

@@ -50,10 +50,10 @@ return {
     flushMicrotasks()
     uv.run("default")
     assert(#microtasks == 0, "microtask queue should be empty after event loop")
-    assert(
-      #internal.unhandledRejections == 0,
-      string.format("unhandledRejection detected:\n\t%s", tostring(internal.unhandledRejections[1]))
-    )
-    internal.dict = {}
+
+    for p, r in pairs(internal.dict) do
+      internal.dict[p] = nil
+      if r.unhandled then error(string.format("unhandledRejection detected:\n\t%s", tostring(r.pdata))) end
+    end
   end,
 }

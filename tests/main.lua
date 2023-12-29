@@ -37,7 +37,7 @@ local lu = {
   assertThrows = function(fn, msg)
     msg = msg or "assertThrows failed"
 
-    local status, r = pcall(fn)
+    local status = pcall(fn)
     if status then fail(msg) end
   end,
 }

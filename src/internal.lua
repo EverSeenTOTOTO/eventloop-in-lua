@@ -1,5 +1,4 @@
 return {
   microtasks = {},
   dict = {},
-  unhandledRejections = {},
 }

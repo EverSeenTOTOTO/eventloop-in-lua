@@ -1,7 +1,7 @@
 return function(lu)
   local Promise = require("src/promise")
 
-  local thenable = Promise:resolve()
+  local thenable = Promise:resolve(42)
   local p = Promise:new(function() error(thenable) end)
 
   p:next(function() lu.done("The promise should not be fulfilled.") end)

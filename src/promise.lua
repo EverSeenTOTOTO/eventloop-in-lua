@@ -12,10 +12,14 @@ local PStates = {
 local dict = {}
 
 local function notifySuccesor(p)
-  for _, task in ipairs(dict[p].successors) do
+  while #dict[p].successors > 0 do
+    local task = dict[p].successors[1]
+    table.remove(dict[p].successors, 1)
     eventLoop.queueMicrotask(task)
   end
 end
+
+local function isThenable(any) return type(any) == "table" and type(any.next) == "function" end
 
 local Promise = createClass(function(this, fn)
   if type(fn) ~= "function" then error("Promise resolver " .. tostring(fn) .. " is not a function") end
@@ -25,7 +29,8 @@ local Promise = createClass(function(this, fn)
     successors = {},
   }
 
-  local function createCallback(finalState)
+  local function createCallback(isResolve)
+    local finalState = isResolve and PStates.Fulfilled or PStates.Rejected
     return function(data)
       if dict[this].pstate ~= PStates.Pending then return end
 
@@ -35,18 +40,24 @@ local Promise = createClass(function(this, fn)
         notifySuccesor(this)
       end
 
-      if data and type(data.next) == "function" then -- resolve(thenable)
+      if data and isThenable(data) then -- resolve(thenable)
         if data == this then
           dict[this].pdata = "Promise-chain cycle"
           dict[this].pstate = PStates.Rejected
           return
         end
 
+        -- reject(any) will directly return any, but resolve(any) will continue resolve if any is thenable
+        if not isResolve then
+          done(data)
+          return
+        end
+
         local poisonedStatus, poisonedResult = pcall(function() return data:next(done, done) end)
 
-        -- next method has been poisoned
-        if data.next ~= this.constructor.prototype.next then
-          createCallback(poisonedStatus and PStates.Fulfilled or PStates.Rejected)(poisonedResult)
+        -- next method has been poisoned, only errors are handled
+        if not poisonedStatus and data.next ~= this.constructor.prototype.next then
+          createCallback(false)(poisonedResult)
         end
       else
         done(data)
@@ -54,8 +65,8 @@ local Promise = createClass(function(this, fn)
     end
   end
 
-  local resolve = createCallback(PStates.Fulfilled)
-  local reject = createCallback(PStates.Rejected)
+  local resolve = createCallback(true)
+  local reject = createCallback(false)
   local immedStatus, immedErr = pcall(function() fn(resolve, reject) end)
 
   if not immedStatus and dict[this].pstate == PStates.Pending then
@@ -67,6 +78,9 @@ end)
 -- instance methods
 
 function Promise.prototype:next(onFulfilled, onRejected)
+  onFulfilled = onFulfilled or function(...) return ... end
+  onRejected = onRejected or function(...) error(...) end
+
   return self.constructor:new(function(resolve, reject)
     local function done(callback)
       local status, result = pcall(callback)
@@ -103,9 +117,7 @@ function Promise.prototype:next(onFulfilled, onRejected)
   end)
 end
 
-function Promise.prototype:catch(onRejected)
-  return self:next(function(x) return x end, onRejected)
-end
+function Promise.prototype:catch(onRejected) return self:next(nil, onRejected) end
 
 function Promise.prototype:__tostring()
   return string.format(

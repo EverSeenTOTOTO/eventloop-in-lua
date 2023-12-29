@@ -9,8 +9,8 @@ local async = function(pack)
     local status, promise = coroutine.resume(g, ...)
 
     if Promise:isInstance(promise) then -- await
-      return promise:next(function(data) resume(data, true) end):catch(function(err) resume(err, false) end)
-    else -- return or error
+      return promise:next(function(data) resume(data, true) end, function(err) resume(err, false) end)
+    else                                -- return or error
       return status and Promise:resolve(promise) or Promise:reject(promise)
     end
   end

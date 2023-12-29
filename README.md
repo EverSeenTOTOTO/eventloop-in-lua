@@ -106,16 +106,16 @@ main elapsed 997.841181s
   end}
   ```
 
-## Important Note
+## Important Notes
 
-You may write codes like this:
+1. You may write codes like this:
 
 ```lua
 async {function main() await ... end}
 main() -- will not work!
 ```
 
-The reason is that `async` is a wrapper function, and its parameter should be a coroutine function which cannot be executed directly. This is not the same as Javascript keyword `async`. In the case above, `main` function is more similar to `function* main() yield...` in Javascript.
+The reason is that `async` acts a wrapper function, taking a coroutine function as its parameter that cannot be directly executed.. This differs from the `async` keyword in Javascript. In the provided case, the `main` function is more similar to a generator function `function* main() yield...` in Javascript.
 
 What you want is probably this:
 
@@ -124,8 +124,31 @@ local main = async {function() await ... end}
 main()
 ```
 
+2. Lua's coroutines are stackful, unlike JavaScript's stackless coroutines. This difference allows you to write code in Lua that would be impossible in JavaScript, as follows:
+
+```lua
+local main = async {
+  function()
+    local foo = function()
+      local bar = function()
+        local baz = function()
+          return await { 42 }
+        end
+
+        return baz()
+      end
+      return bar()
+    end
+
+    local r = await { foo() }
+    print(r) -- 42
+  end
+}
+```
+
+
 ## How to?
 
-Function apply `foo({bar})` can be represented by `foo {bar}` in Lua, which is commonly used to create DSLs, we use this feature to simulate `async/await` keywords.
+Function apply `foo({bar})` can be represented by `foo {bar}` in Lua, which is commonly used to create DSLs, we use this feature to simulate `async/await` syntax.
 
 To see how to implement `async/await` with coroutine, you can read my code gist [here](https://gist.github.com/EverSeenTOTOTO/ac0a60de5568be71f6fc80c9e155ac7f).

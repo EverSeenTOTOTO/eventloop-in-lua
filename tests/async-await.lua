@@ -12,7 +12,8 @@ return function(lu)
 
   return {
     testEmpty = function()
-      local f = async { function() end }
+      local f = async { function()
+      end }
 
       lu.assertEquals(type(f), "function")
       lu.assertEquals(Promise:isInstance(f()), true)
@@ -117,6 +118,27 @@ return function(lu)
       eventLoop.startEventLoop(f)
 
       lu.assertEquals(r, { 42 })
+    end,
+    testThenable = function()
+      local called = false
+      local r = {}
+      local thenable = {
+        next = function()
+          called = true
+          return 42
+        end,
+      }
+      local f = async {
+        function()
+          local value, status = await { thenable }
+          table.insert(r, value)
+          table.insert(r, status)
+        end,
+      }
+      eventLoop.startEventLoop(f)
+
+      lu.assertEquals(called, true)
+      lu.assertEquals(r, {})
     end,
   }
 end

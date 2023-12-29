@@ -1,30 +1,65 @@
 local uv = require("luv")
 local el = require("src/eventLoop")
 
+local fail = function(msg)
+  print(msg)
+  os.exit(1)
+end
+
+local once = false
 local lu = {
-  done = function(msg) assert(msg == nil, msg) end,
-  assertEquals = function(lhs, rhs, msg)
-    if type(lhs) == "table" and type(rhs) == "table" then
-      for i = 1, #lhs do
-        if lhs[i] ~= rhs[i] then return false end
-      end
-      return true
+  done = function(msg)
+    if once == false then
+      once = true
+    else
+      fail("done() called more than once")
     end
 
-    assert(lhs == rhs, msg)
+    if msg ~= nil then
+      fail(msg)
+    end
   end,
-  assertStrContains = function(str, pattern, msg) assert(string.find(str, pattern:gsub("-", "%%-")), msg) end,
+  assertEquals = function(lhs, rhs, msg)
+    msg = msg or "assertEquals failed"
+    if type(lhs) == "table" and type(rhs) == "table" then
+      if #lhs ~= #rhs then
+        fail(msg)
+      end
+      for i = 1, #lhs do
+        if lhs[i] ~= rhs[i] then
+          fail(msg)
+        end
+      end
+      return
+    end
+
+    if lhs ~= rhs then
+      fail(msg)
+    end
+  end,
+  assertStrContains = function(str, pattern, msg)
+    msg = msg or "assertStrContains failed"
+
+    if not string.find(str, pattern:gsub("-", "%%-")) then
+      fail(msg)
+    end
+  end,
   assertThrows = function(fn, msg)
-    local status = pcall(fn)
-    assert(not status, msg)
+    msg = msg or "assertThrows failed"
+
+    local status, r = pcall(fn)
+    if status then
+      fail(msg)
+    end
   end,
 }
 
 local function runGroupTests(path)
   local tests = require(path)(lu)
   for key, test in pairs(tests) do
+    print(string.format("Running: %s:%s", path, key))
+    once = false
     test()
-    print(string.format("PASS: %s:%s", path, key))
   end
 end
 
@@ -54,8 +89,9 @@ local function runTests(path)
   for _, file in ipairs(files) do
     local test = require(file)
 
+    print(string.format("Running: %s", file))
+    once = false
     el.startEventLoop(function() test(lu) end)
-    print(string.format("PASS: %s", file))
   end
 end
 

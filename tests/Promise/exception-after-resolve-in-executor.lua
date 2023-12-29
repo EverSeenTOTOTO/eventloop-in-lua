@@ -2,10 +2,10 @@ return function(lu)
   local Promise = require("src/promise")
 
   local thenable = {
-    next = function(resolve) resolve() end,
+    next = function(_, resolve) resolve() end,
   }
 
-  local function executor(resolve, reject)
+  local function executor(resolve)
     resolve(thenable)
     error("ignored exception")
   end

@@ -56,7 +56,9 @@ local Promise = createClass(function(this, fn)
           return
         end
 
-        local poisonedStatus, poisonedResult = pcall(function() return data:next(done, done) end)
+        local poisonedStatus, poisonedResult = pcall(function()
+          return data:next(done, function(value) done(value, PStates.Rejected) end)
+        end)
 
         -- next method has been poisoned, only errors are handled
         if not poisonedStatus and data.next ~= this.constructor.prototype.next then
@@ -125,16 +127,20 @@ end
 function Promise.prototype:catch(onRejected) return self:next(nil, onRejected) end
 
 function Promise.prototype:__tostring()
+  local state = dict[self].pstate
+  local data = dict[self].pdata
+
   return string.format(
-    "Promise { %s }",
-    dict[self].pstate == PStates.Fulfilled and tostring(dict[self].pdata) or dict[self].pstate
+    "Promise { %s%s }",
+    state == PStates.Fulfilled and tostring(data) or '<' .. state .. '>',
+    state == PStates.Rejected and ' ' .. tostring(data) or ''
   )
 end
 
 -- static methods
 
 function Promise:resolve(any)
-  return self:isInstance(any) and any or self:new(function(res) res(any) end)
+  return self:new(function(res) res(any) end)
 end
 
 function Promise:reject(any)

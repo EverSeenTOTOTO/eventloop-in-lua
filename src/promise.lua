@@ -30,8 +30,7 @@ local Promise = createClass(function(this, fn)
     successors = {},
   }
 
-  local function createCallback(isResolve)
-    local finalState = isResolve and PStates.Fulfilled or PStates.Rejected
+  local function createCallback(finalState)
     return function(data)
       if dict[this].pstate ~= PStates.Pending then return end
 
@@ -44,39 +43,41 @@ local Promise = createClass(function(this, fn)
         notifySuccesor(this)
       end
 
-      if data and isThenable(data) then -- resolve(thenable)
-        if data == this then
-          done("Promise-chain cycle", PStates.Rejected)
-          return
-        end
-
-        -- reject(any) will directly return any, but resolve(any) will continue resolve if any is thenable
-        if not isResolve then
-          done(data)
-          return
-        end
-
-        local poisonedStatus, poisonedResult = pcall(function()
-          return data:next(done, function(value) done(value, PStates.Rejected) end)
-        end)
-
-        -- next method has been poisoned, only errors are handled
-        if not poisonedStatus and data.next ~= this.constructor.prototype.next then
-          createCallback(false)(poisonedResult)
-        end
-      else
+      -- reject(any) will directly return any
+      if finalState == PStates.Rejected or not isThenable(data) then -- resolve(thenable)
         done(data)
+        return
+      end
+
+      if data == this then
+        done("Promise-chain cycle", PStates.Rejected)
+        return
+      end
+
+      local poisonedStatus, poisonedResult = pcall(function()
+        return data:next(
+          done,
+          -- resolve(rejectedPromise) will reject with rejectedPromise's reason
+          function(value) done(value, PStates.Rejected) end
+        )
+      end)
+
+      -- next method has been poisoned, only errors are handled
+      if not poisonedStatus and data.next ~= this.constructor.prototype.next then
+        -- done(poisonedResult, PStates.Rejected); this is incorrect because poisenResult may be thanable
+        createCallback(PStates.Rejected)(poisonedResult)
       end
     end
   end
 
-  local resolve = createCallback(true)
-  local reject = createCallback(false)
+  local resolve = createCallback(PStates.Fulfilled)
+  local reject = createCallback(PStates.Rejected)
   local immedStatus, immedErr = pcall(function() fn(resolve, reject) end)
 
   if not immedStatus and dict[this].pstate == PStates.Pending then
     dict[this].pdata = immedErr
     dict[this].pstate = PStates.Rejected
+    notifySuccesor(this)
   end
 end)
 
@@ -132,8 +133,8 @@ function Promise.prototype:__tostring()
 
   return string.format(
     "Promise { %s%s }",
-    state == PStates.Fulfilled and tostring(data) or '<' .. state .. '>',
-    state == PStates.Rejected and ' ' .. tostring(data) or ''
+    state == PStates.Fulfilled and tostring(data) or "<" .. state .. ">",
+    state == PStates.Rejected and " " .. tostring(data) or ""
   )
 end
 

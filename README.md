@@ -30,7 +30,7 @@ end
 local start = uv.hrtime()
 local count = function(name)
   return function()
-    print(string.format("%s elapsed %fs", name, (uv.hrtime() - start) / 1e6))
+    print(string.format("%s end %fms", name, (uv.hrtime() - start) / 1e6))
   end
 end
 
@@ -50,9 +50,9 @@ eventLoop.startEventLoop(main)
 Output:
 
 ```
-timer elapsed 497.526845s
-io elapsed 497.931135s
-main elapsed 997.841181s
+timer end 497.156447ms
+io end 499.710329ms
+main end 1498.829462ms
 ```
 
 ## API

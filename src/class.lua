@@ -32,15 +32,11 @@ local function createClass(prototype)
   function class:extend(newPrototype)
     newPrototype = newPrototype or {}
 
-    newPrototype.super = self.prototype
-
     -- prototype members, e.g. constructor, ...
     newPrototype.__proto__ = self.prototype
     setPrototype(newPrototype)
 
     local derived = createClass(newPrototype)
-
-    newPrototype.class = derived
 
     -- static members, e.g. new, extend, ...
     setPrototype(derived, self)

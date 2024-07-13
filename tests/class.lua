@@ -74,12 +74,12 @@ return function(lu)
 
       local Derived = Base:extend({
         constructor = function(self, foo)
-          self.super.constructor(self, foo)
+          Base.prototype.constructor(self, foo)
           return self
         end,
         normal = function(self)
-          -- note self.super is a prototype, we need to bind instance manually before invokation
-          return self.super.normal(self) + 1
+          -- note Base.prototype.normal is a prototype method, we need to bind instance manually before invokation
+          return Base.prototype.normal(self) + 1
         end,
       })
 
@@ -89,6 +89,14 @@ return function(lu)
       lu.assertEquals(foo:normal(), 42)
       lu.assertEquals(bar:normal(), 25)
       lu.assertEquals(Derived:isInstance(bar), true)
+
+      local Derived2 = Derived:extend()
+
+      lu.assertEquals(Base:isDerived(Derived2), true)
+
+      local baz = Derived2:new(0)
+
+      lu.assertEquals(baz:normal(), 1)
     end
   }
 end

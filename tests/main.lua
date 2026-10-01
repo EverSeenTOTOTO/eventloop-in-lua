@@ -86,4 +86,6 @@ end
 runGroupTests("tests/class")
 runGroupTests("tests/event-loop")
 runTests("tests/Promise")
+runGroupTests("tests/combinators")
 runGroupTests("tests/async-await")
+runGroupTests("tests/internal")

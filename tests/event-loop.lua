@@ -2,6 +2,19 @@ return function(lu)
   local el = require("src/eventLoop")
 
   return {
+    testClearTimeoutAfterFire = function()
+      local r = {}
+      local timer = el.setTimeout(function() table.insert(r, 0) end, 1)
+
+      el.setTimeout(function()
+        el.clearTimeout(timer) -- already fired and closed, should be a no-op
+        table.insert(r, 1)
+      end, 3)
+
+      el.startEventLoop(el.flushMicrotasks)
+
+      lu.assertEquals(r, { 0, 1 })
+    end,
     testSetTimeout = function()
       local r = {}
       local timer = el.setTimeout(function() table.insert(r, 42) end, 3)

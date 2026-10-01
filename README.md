@@ -55,6 +55,17 @@ io end 499.710329ms
 main end 1498.829462ms
 ```
 
+## Run
+
+Install [luv](https://github.com/luvit/luv) first, e.g. `luarocks install luv`, then:
+
+```bash
+make test   # test suite
+make start  # example entry
+```
+
+The makefile picks the first interpreter (`luajit` or `lua`) that can `require("luv")`; override it with `make LUA=lua5.4 test` if needed.
+
 ## API
 
   See [tests](./tests) for more examples.
@@ -79,16 +90,24 @@ main end 1498.829462ms
   - `Promise:isDerived(class)`
   - `Promise:resolve(data)`
   - `Promise:reject(err)`
-  - `Promise:all`(TODO)
-  - `Promise:any`(TODO)
-  - `Promise:race`(TODO)
-  - `Promise:allSettled`(TODO)
+  - `Promise:all(list)`
+  - `Promise:any(list)`
+  - `Promise:race(list)`
+  - `Promise:allSettled(list)`
 
   Instance methods:
 
   - `promise:next(onFulfilled, onRejected)`
   - `promise:catch(onRejected)`
-  - `promise:finally`(TODO)
+  - `promise:finally(onFinally)`
+
+  The combinators (`all`/`any`/`race`/`allSettled`) accept array-like tables, and their elements are promisified just like `Promise:resolve`.
+
+  - `all` rejects with the first rejection reason, otherwise fulfills with all values in list order.
+  - `any` fulfills with the first fulfilled value, otherwise rejects with an `AggregateError`-like table `{ name = "AggregateError", errors = { ... } }`.
+  - `race` settles with the first settled element (an empty list stays pending forever).
+  - `allSettled` never rejects, it fulfills with `{ { status = "fulfilled", value = ... }, { status = "rejected", reason = ... } }`.
+  - `finally` calls `onFinally` without arguments on settlement; the original value/reason passes through unless `onFinally` returns a rejecting promise or throws. A non-callable `onFinally` is ignored, like `promise:next(nil)`.
 
 + `async`
 

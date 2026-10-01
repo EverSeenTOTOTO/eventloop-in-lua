@@ -53,6 +53,33 @@ return function(lu)
 
       lu.assertEquals(r, { 42 })
     end,
+    testAwaitThenReturn = function()
+      local r = {}
+      local f = async {
+        function()
+          await { 42 }
+          return 43
+        end,
+      }
+
+      eventLoop.startEventLoop(function()
+        f():next(function(value) table.insert(r, value) end)
+      end)
+
+      lu.assertEquals(r, { 43 })
+    end,
+    testReturnPromise = function()
+      local r = {}
+      local f = async {
+        function() return Promise:resolve(42) end,
+      }
+
+      eventLoop.startEventLoop(function()
+        f():next(function(value) table.insert(r, value) end)
+      end)
+
+      lu.assertEquals(r, { 42 })
+    end,
     testAwaitReturn = function()
       local r = {}
       local f = async {
